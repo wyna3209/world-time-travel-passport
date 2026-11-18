@@ -86,7 +86,7 @@ dialog::backdrop{background:#211740a8}
     <p id="resultSummary"></p>
     <div class="result-actions">
       <button class="action primary" id="retry" type="button">새 문제로 다시 도전</button>
-      <button class="action primary" id="resultTravel" type="button" hidden>세계 여행 시작 →</button>
+      <button class="action primary" id="resultTravel" type="button" hidden>세계 여행 시작</button>
     </div>
   </section>
   <nav id="questionNav" aria-label="문제 이동과 풀이">
@@ -236,6 +236,11 @@ const questions=[
 const questionResults=questions.map(()=>null);
 const stages={read:'시계 읽기',draw:'시계에 시각 나타내기',easy:'간단한 걸린 시간 구하기',across:'정각을 지나며 걸린 시간 구하기'};
 let index=0, readAnswer;
+let travelTimer=null;
+function startTravel(){
+  if(travelTimer!==null)clearTimeout(travelTimer);
+  window.location.assign('./world_time_travel%20(2).html');
+}
 const questionList=$('questionList');
 for(const [kind,label] of Object.entries(stages)){
   const group=document.createElement('optgroup');
@@ -247,7 +252,7 @@ for(const [kind,label] of Object.entries(stages)){
 }
 questionList.addEventListener('change',event=>go(Number(event.target.value)));
 function go(nextIndex){
-  if(nextIndex<0||nextIndex>=questions.length)return;
+  if(!$('results').hidden||nextIndex<0||nextIndex>=questions.length)return;
   index=nextIndex;
   render();
   $('question').focus({preventScroll:true});
@@ -279,7 +284,7 @@ function render(){
   visual.replaceChildren();
   $('inputArea').replaceChildren();
   if(q.kind==='read'||draw){
-    const timeReader=clockFace(visual,draw?'바늘 조작':'시각 읽기',draw?720:q.time,{kind:'start',editable:draw});
+    const timeReader=clockFace(visual,draw?'바늘 조작':'시각 읽기',draw?(q.time===720?360:720):q.time,{kind:'start',editable:draw});
     visual.querySelector('.time-caption').hidden=true;
     readAnswer=draw?timeReader:enterNumbers(true);
   }else{
@@ -303,13 +308,13 @@ function render(){
 function expected(q){return q.time??q.end-q.start;}
 function answerText(q){return q.time?clockText(q.time):elapsedText(expected(q));}
 function check(){
+  if(!$('results').hidden)return;
   const q=questions[index], value=readAnswer(), feedback=$('feedback');
   const correct=value===expected(q);
   feedback.dataset.correct=correct;
   if(!Number.isFinite(value))feedback.textContent=q.kind==='read'?'시 칸과 분 칸에 숫자를 써 보세요.':'시간과 분을 확인해 보세요. 1시간은 60분이에요.';
   else{
-    if(correct)questionResults[index]=true;
-    else if(questionResults[index]===null)questionResults[index]=false;
+    questionResults[index]=correct;
     if(correct)feedback.textContent=`✓ 정답! ${answerText(q)}`;
     else feedback.textContent=q.time?'× 다시 해 보세요. 짧은바늘과 긴바늘을 확인해 보세요.':
       q.kind==='easy'?'× 다시 해 보세요. 시끼리, 분끼리 빼 보세요.':'× 다시 해 보세요. 먼저 다음 정각까지 몇 분인지 세어 보세요.';
@@ -325,10 +330,12 @@ function showResults(score){
   $('quiz').hidden=true;
   $('questionNav').hidden=true;
   $('results').hidden=false;
+  questionList.disabled=true;
   $('resultTitle').textContent=`${score}/20 ${passed?'정답이에요!':'정답이에요'}`;
-  $('resultSummary').textContent=passed?'축하해요! 세계 여행을 시작할 수 있어요.':'15개 이상 맞히지 못했어요. 새 문제로 다시 도전해 보세요.';
+  $('resultSummary').textContent=passed?'축하해요! 잠시 후 세계 여행으로 이동해요.':'15개 이상 맞히지 못했어요. 새 문제로 다시 도전해 보세요.';
   $('resultTravel').hidden=!passed;
   $('resultTitle').focus({preventScroll:true});
+  if(passed)travelTimer=setTimeout(startTravel,2000);
 }
 function solution(){
   const q=questions[index];
@@ -336,7 +343,8 @@ function solution(){
   let lines=[];
   if(q.time){
     const h=Math.floor(q.time/60),m=q.time%60;
-    lines=[`짧은바늘 · ${h}와 ${h+1} 사이`,`긴바늘 · ${m/5}를 가리켜요 → ${m}분`];
+    lines=[m?`짧은바늘 · ${h}와 ${h%12+1} 사이`:`짧은바늘 · ${h}를 가리켜요`,
+      `긴바늘 · ${m/5||12}를 가리켜요 → ${m}분`];
   }else if(q.kind==='easy'){
     const a=Math.floor(q.start/60),b=Math.floor(q.end/60);
     lines=[`시끼리 · ${b} − ${a} = ${b-a}시간`,`분끼리 · ${q.end%60} − ${q.start%60} = ${q.end%60-q.start%60}분`];
@@ -356,7 +364,7 @@ $('inputArea').addEventListener('input',()=>{$('feedback').hidden=true;});
 $('visual').addEventListener('input',()=>{$('feedback').hidden=true;});
 $('check').addEventListener('click',check);
 $('retry').addEventListener('click',()=>window.location.reload());
-$('resultTravel').addEventListener('click',()=>{window.location.href='./world_time_travel%20(2).html';});
+$('resultTravel').addEventListener('click',startTravel);
 $('prev').addEventListener('click',()=>go(index-1));
 $('next').addEventListener('click',()=>go(index+1));
 $('reveal').addEventListener('click',solution);
