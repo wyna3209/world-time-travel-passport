@@ -79,6 +79,7 @@ dialog::backdrop{background:#211740a8}
     <p id="hint" class="hint" hidden>시침과 분침의 끝을 잡고 움직여 보세요.</p>
     <p class="feedback" id="feedback" role="status" hidden></p>
     <button class="action primary" id="check" type="button">정답 확인</button>
+    <p class="hint">답을 입력하고 정답 확인을 누르면 다음 문제로 갈 수 있어요.</p>
   </section>
   <section class="lesson result-screen" id="results" aria-labelledby="resultTitle" hidden>
     <p class="stage">20문제 완료</p>
@@ -235,7 +236,7 @@ const questions=[
 ];
 const questionResults=questions.map(()=>null);
 const stages={read:'시계 읽기',draw:'시계에 시각 나타내기',easy:'간단한 걸린 시간 구하기',across:'정각을 지나며 걸린 시간 구하기'};
-let index=0, readAnswer;
+let index=0, readAnswer, currentChecked=false, answerTouched=false;
 let travelTimer=null;
 function startTravel(){
   if(travelTimer!==null)clearTimeout(travelTimer);
@@ -253,6 +254,11 @@ for(const [kind,label] of Object.entries(stages)){
 questionList.addEventListener('change',event=>go(Number(event.target.value)));
 function go(nextIndex){
   if(!$('results').hidden||nextIndex<0||nextIndex>=questions.length)return;
+  const firstUnanswered=questionResults.indexOf(null);
+  if(nextIndex>index&&(!currentChecked||(firstUnanswered!==-1&&nextIndex>firstUnanswered))){
+    questionList.value=String(index);
+    return;
+  }
   index=nextIndex;
   render();
   $('question').focus({preventScroll:true});
@@ -301,19 +307,39 @@ function render(){
     $('resetClock').addEventListener('click',resetClock);
     readAnswer=enterNumbers(false);
   }
+  currentChecked=false;
+  answerTouched=false;
+  updateNavigation();
+}
+function updateNavigation(){
   questionList.value=String(index);
   $('prev').disabled=index===0;
-  $('next').disabled=index===questions.length-1;
+  $('next').disabled=index===questions.length-1||!currentChecked;
+  const firstUnanswered=questionResults.indexOf(null);
+  for(const option of questionList.options){
+    const target=Number(option.value);
+    option.disabled=target>index&&(!currentChecked||(firstUnanswered!==-1&&target>firstUnanswered));
+  }
+}
+function answerChanged(){
+  $('feedback').hidden=true;
+  currentChecked=false;
+  answerTouched=true;
+  updateNavigation();
 }
 function expected(q){return q.time??q.end-q.start;}
 function answerText(q){return q.time?clockText(q.time):elapsedText(expected(q));}
 function check(){
   if(!$('results').hidden)return;
-  const q=questions[index], value=readAnswer(), feedback=$('feedback');
+  const q=questions[index], value=q.kind==='draw'&&!answerTouched?NaN:readAnswer(), feedback=$('feedback');
   const correct=value===expected(q);
   feedback.dataset.correct=correct;
-  if(!Number.isFinite(value))feedback.textContent=q.kind==='read'?'시 칸과 분 칸에 숫자를 써 보세요.':'시간과 분을 확인해 보세요. 1시간은 60분이에요.';
+  if(!Number.isFinite(value)){
+    currentChecked=false;
+    feedback.textContent=q.kind==='draw'?'시침과 분침을 움직여 답을 나타내 보세요.':q.kind==='read'?'시 칸과 분 칸에 숫자를 써 보세요.':'시간과 분을 확인해 보세요. 1시간은 60분이에요.';
+  }
   else{
+    currentChecked=true;
     questionResults[index]=correct;
     if(correct)feedback.textContent=`✓ 정답! ${answerText(q)}`;
     else feedback.textContent=q.time?'× 다시 해 보세요. 짧은바늘과 긴바늘을 확인해 보세요.':
@@ -323,6 +349,7 @@ function check(){
     $('stage').textContent=`${stages[q.kind]} · ${index+1}/${questions.length} · 맞힌 문제 ${score}`;
     if(complete){showResults(score);return;}
   }
+  updateNavigation();
   feedback.hidden=false;
 }
 function showResults(score){
@@ -360,8 +387,11 @@ function solution(){
 $('inputArea').addEventListener('keydown',event=>{
   if(event.key==='Enter'&&!event.isComposing){event.preventDefault();check();}
 });
-$('inputArea').addEventListener('input',()=>{$('feedback').hidden=true;});
-$('visual').addEventListener('input',()=>{$('feedback').hidden=true;});
+$('inputArea').addEventListener('input',answerChanged);
+$('visual').addEventListener('input',()=>{
+  if(questions[index].kind==='draw')answerChanged();
+  else $('feedback').hidden=true;
+});
 $('check').addEventListener('click',check);
 $('retry').addEventListener('click',()=>window.location.reload());
 $('resultTravel').addEventListener('click',startTravel);

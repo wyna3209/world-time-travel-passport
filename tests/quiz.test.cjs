@@ -14,6 +14,7 @@ function session() {
     return elements.get(id);
   };
   get('results').hidden = true;
+  get('questionList').options = Array.from({length:20}, (_,i)=>({value:String(i)}));
   const timers = [];
   const destinations = [];
   const context = vm.createContext({
@@ -56,6 +57,7 @@ for (const score of [0, 14, 15, 20]) {
   const s = session();
   s.run(`for (let i=0;i<20;i++) {
     index=i;
+    answerTouched=true;
     readAnswer=()=>expected(questions[index])+(i<${score}?0:5);
     check();
     if(i<19 && !$('results').hidden)throw Error('Finished before all 20 answers');
@@ -79,4 +81,33 @@ s.run('readAnswer=()=>expected(questions[0]); check();');
 assert.equal(s.run('questionResults[0]'), true);
 s.run('readAnswer=()=>expected(questions[0])+5; check();');
 assert.equal(s.run('questionResults[0]'), false);
-console.log('Passed: 200 randomized quizzes; 0/14/15/20 score gates; all-20 completion; invalid input; answer changes; travel destination.');
+
+const navigation = session();
+navigation.run('render=()=>{currentChecked=false;answerTouched=false;updateNavigation();}; updateNavigation();');
+assert.equal(navigation.get('next').disabled, true);
+assert.equal(navigation.get('questionList').options[1].disabled, true);
+navigation.run('go(1); go(19);');
+assert.equal(navigation.run('index'), 0);
+navigation.run('readAnswer=()=>NaN; check(); go(1);');
+assert.equal(navigation.run('index'), 0);
+navigation.run('readAnswer=()=>expected(questions[index])+5; check();');
+assert.equal(navigation.get('next').disabled, false);
+assert.equal(navigation.get('questionList').options[1].disabled, false);
+assert.equal(navigation.get('questionList').options[2].disabled, true);
+navigation.run('go(2);');
+assert.equal(navigation.run('index'), 0);
+navigation.run('answerChanged(); go(1);');
+assert.equal(navigation.get('next').disabled, true);
+assert.equal(navigation.run('index'), 0);
+navigation.run('check(); go(1);');
+assert.equal(navigation.run('index'), 1);
+assert.equal(navigation.get('next').disabled, true);
+navigation.run('go(0);');
+assert.equal(navigation.run('index'), 0);
+
+const drawing = session();
+drawing.run('index=5; readAnswer=()=>expected(questions[index]); check();');
+assert.equal(drawing.run('questionResults[5]'), null);
+drawing.run('answerChanged(); check();');
+assert.equal(drawing.run('questionResults[5]'), true);
+console.log('Passed: randomized questions, score gates, answer-required navigation, selection bypass prevention, edited answers, untouched drawing, travel destination.');

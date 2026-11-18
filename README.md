@@ -4,6 +4,8 @@
 
 ## 배포
 
+답을 입력하고 **정답 확인**을 눌러야 다음 문제로 이동할 수 있습니다. 빈 답이나 아직 확인하지 않은 답으로는 다음 버튼, 문제 선택 메뉴, 방향키로 건너뛸 수 없습니다. 시계 그리기 문제는 바늘을 조작한 뒤 확인해야 합니다. 오답도 제출한 답으로 인정하며 기존 15/20 통과 기준으로 채점합니다.
+
 GitHub Pages는 GitHub Actions로 자동 배포됩니다. `main` 브랜치에 푸시하거나 Actions 탭에서 **Deploy static site to GitHub Pages**를 수동 실행하면 됩니다.
 
 공개 사이트: https://wyna3209.github.io/world-time-travel-passport/
