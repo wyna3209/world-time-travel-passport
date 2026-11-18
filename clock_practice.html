@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>시계와 걸린 시간 연습</title>
+<style>
+:root{color-scheme:light;--ink:#26213d;--purple:#4b387f;--line:#d9cbee;font-family:"Noto Sans KR","Malgun Gothic","Apple SD Gothic Neo",sans-serif}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;min-height:100dvh;display:grid;grid-template-rows:auto 1fr;background:#f3edf9;color:var(--ink)}
+button,input{font:inherit}
+button{cursor:pointer}
+button:disabled{opacity:.5;cursor:default}
+button:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:3px solid #934500;outline-offset:3px}
+header{background:var(--purple);color:white;padding:10px max(16px,calc((100vw - 1260px)/2));display:flex;align-items:center;justify-content:space-between;gap:8px}
+header h1{margin:0;font-size:clamp(19px,2vw,32px)}
+#questionList{max-width:100%;min-width:140px;background:#fff;color:#402c78;border:1px solid #d9cbee;border-radius:9px;padding:8px;font:inherit;font-weight:750}
+#questionList:focus-visible{outline:3px solid #ffb55c;outline-offset:2px}
+main{width:min(1300px,100%);margin:0 auto;padding:clamp(9px,2vh,22px) clamp(11px,3vw,26px);display:grid;grid-template-rows:1fr auto;gap:10px}
+.lesson{background:#fffefa;border:2px solid var(--line);border-radius:22px;box-shadow:0 4px #e2d7ef;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:clamp(10px,2vh,22px) 14px}
+.stage{font-size:clamp(14px,1.8vw,24px);padding:5px 12px;border-radius:30px;background:#efe6fa;color:#482f79;font-weight:800;margin:0 0 7px}
+h2{font-size:clamp(24px,3.5vw,49px);line-height:1.2;letter-spacing:-.045em;margin:4px 0 9px}
+.visual{display:flex;align-items:center;justify-content:center;gap:clamp(5px,3vw,32px);width:100%;margin:4px 0}
+.clock{width:min(75vw,39dvh,340px);flex:none}
+.clock svg{width:100%;height:auto;display:block}
+.clock svg text{fill:#21344d;font-size:12px;font-weight:850;pointer-events:none}
+.clock .hour{stroke:#18374f}.clock .minute{stroke:#a8421d}
+.clock[data-edit=true] svg{touch-action:none;user-select:none}
+.clock [data-hand]{cursor:grab}
+.clock [data-hand]:focus-visible .knob{stroke:#029a70;stroke-width:3}
+.clock .hand-line,.clock .knob{pointer-events:none}
+.time-caption[hidden]{display:none}
+.target-time,.time-card{border:1px solid #c5b6e3;border-radius:12px;font-weight:850;line-height:1.25}
+.target-time{font-size:clamp(21px,3vw,38px);background:#efebfa;color:#46317d;padding:5px 16px;margin:2px 0}
+.time-card{width:min(44%,390px);font-size:clamp(17px,2.25vw,30px);padding:clamp(10px,3vw,28px) 4px}
+.time-card strong{display:block;font-size:clamp(23px,4.8vw,64px);white-space:nowrap;margin-top:4px}
+.start{background:#e8f2ff;color:#124883;border-color:#a9c4e9}
+.end{background:#fff1de;color:#843714;border-color:#edc092}
+.arrow{color:#645280;font-size:clamp(17px,3vw,42px)}
+.entry{display:flex;align-items:center;justify-content:center;gap:clamp(9px,3vw,31px);margin:8px 0;font-size:clamp(20px,2.8vw,35px);font-weight:850}
+.entry input{width:clamp(65px,10vw,120px);border:2px solid #a99ac7;border-radius:10px;padding:7px 5px;text-align:center;color:var(--ink)}
+.hint{font-weight:700;margin:2px 0 5px;font-size:clamp(13px,1.55vw,20px)}
+.feedback{max-width:900px;margin:6px 0;font-weight:800;padding:7px 15px;border-radius:10px;background:#ffecee;color:#8a2633;font-size:clamp(15px,2vw,26px)}
+.feedback[data-correct=true]{background:#e3f5e8;color:#185b42}
+.action{background:white;color:#453072;border:1px solid #b7a8cf;border-radius:10px;padding:8px 12px;font-weight:850;font-size:clamp(14px,1.7vw,22px);white-space:nowrap}
+.primary{background:var(--purple);color:white;border-color:var(--purple)}
+nav{display:flex;justify-content:space-between;align-items:center;gap:6px}
+dialog{width:min(800px,calc(100% - 22px));border:3px solid #c7b8e8;border-radius:22px;background:#fffefa;color:var(--ink);text-align:center;padding:clamp(16px,4vw,40px)}
+dialog::backdrop{background:#211740a8}
+#solutionAnswer{display:block;font-size:clamp(32px,5.4vw,65px);color:#185b42;margin:6px 0 13px}
+#steps{background:#eaf5ed;color:#24523c;padding:10px;border-radius:12px;font-size:clamp(16px,2.4vw,32px);font-weight:750;line-height:1.5;margin:0 0 14px}
+#steps div+div{margin-top:3px}
+@media(max-width:460px){header{align-items:flex-start;flex-wrap:wrap}.action{padding:7px}.entry{gap:8px}}
+.visual.elapsed{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);max-width:1110px}
+.visual.elapsed .time-card{width:100%}
+.visual.elapsed .time-card strong{font-size:clamp(20px,3.5vw,54px)}
+.practice-clock{display:grid;justify-items:center;gap:3px}
+.practice-clock .clock{width:min(32vw,37dvh,325px)}
+.practice-clock .time-caption{font-size:clamp(14px,1.6vw,22px);color:#483379}
+.practice-clock .action{font-size:clamp(13px,1.35vw,18px)}
+@media(max-width:570px){.visual.elapsed{grid-template-columns:1fr 1fr}.practice-clock{grid-column:1/-1;grid-row:2;padding-top:4px}.practice-clock .clock{width:min(62vw,34dvh,270px)}}
+</style>
+</head>
+<body>
+<header><h1>시계와 걸린 시간 연습</h1><select id="questionList" aria-label="문제 바로 선택"></select></header>
+<main>
+  <section class="lesson" aria-labelledby="question">
+    <p class="stage" id="stage"></p>
+    <h2 id="question" tabindex="-1"></h2>
+    <p class="target-time" id="target" hidden></p>
+    <div class="visual" id="visual"></div>
+    <div id="inputArea"></div>
+    <p id="hint" class="hint" hidden>시침과 분침의 끝을 잡고 움직여 보세요.</p>
+    <p class="feedback" id="feedback" role="status" hidden></p>
+    <button class="action primary" id="check" type="button">정답 확인</button>
+    <button class="action primary" id="travel" type="button" hidden>세계 여행 시작 →</button>
+  </section>
+  <nav aria-label="문제 이동과 풀이">
+    <button class="action" id="prev" type="button">← 이전</button>
+    <button class="action" id="reveal" type="button">정답·풀이 보기</button>
+    <button class="action" id="next" type="button">다음 →</button>
+  </nav>
+</main>
+<dialog id="solution" aria-labelledby="solutionTitle">
+  <h2 id="solutionTitle">정답과 풀이</h2>
+  <strong id="solutionAnswer"></strong>
+  <div id="steps"></div>
+  <button class="action primary" id="closeSolution" type="button">문제로 돌아가기</button>
+</dialog>
+<script>
+"use strict";
+const $=id=>document.getElementById(id);
+function svg(tag,attrs={}) {
+  const element=document.createElementNS('http://www.w3.org/2000/svg',tag);
+  for (const [key,value] of Object.entries(attrs)) element.setAttribute(key,value);
+  return element;
+}
+function clockText(minutes) {
+  const hour=Math.floor(minutes/60)%12||12;
+  return `${hour}시${minutes%60?' '+minutes%60+'분':''}`;
+}
+function elapsedText(minutes) {
+  const hour=Math.floor(minutes/60), minute=minutes%60;
+  return [hour?hour+'시간':'',minute?minute+'분':''].filter(Boolean).join(' ') || '0분';
+}
+function clockFace(container,label,minutes,{kind,editable=false,linked=false}){
+  const card=document.createElement('div');
+  card.className='clock';
+  card.dataset.edit=editable;
+  const heading=document.createElement('strong');
+  heading.textContent=label;
+  heading.className=`time-caption time-${kind}`;
+  const face=svg('svg',{viewBox:'0 0 160 160',role:editable?'group':'img','aria-label':`${label} 시계`});
+  face.append(svg('circle',{cx:80,cy:80,r:73,fill:'#fffdf9',stroke:'#99b5bd','stroke-width':2}));
+  for(let i=0;i<60;i++){
+    const rad=i*Math.PI/30;
+    const inner=i%5===0?62:66;
+    face.append(svg('line',{x1:80+inner*Math.sin(rad),y1:80-inner*Math.cos(rad),x2:80+69*Math.sin(rad),y2:80-69*Math.cos(rad),stroke:i%5===0?'#3d5b6a':'#a6bdc4','stroke-width':i%5===0?1.8:0.8}));
+  }
+  for(let i=1;i<=12;i++){
+    const rad=i*Math.PI/6;
+    const numeral=svg('text',{x:80+53*Math.sin(rad),y:84-53*Math.cos(rad),'text-anchor':'middle'});
+    numeral.textContent=i;
+    face.append(numeral);
+  }
+  const value={hour:Math.floor(minutes/60), minute:minutes%60};
+  const hands={};
+  for(const [name,korean,length,width,color] of [['hour','시침',30,6,'#18374f'],['minute','분침',48,4,'#a8421d']]){
+    const hand=svg('g',editable?{tabindex:0,role:'slider','aria-label':korean,'aria-valuemin':name==='hour'?1:0,'aria-valuemax':name==='hour'?12:55,'data-hand':name}:{});
+    hand.append(svg('line',{x1:80,y1:80,x2:80,y2:80-length,class:`hand-line ${name}`,'stroke-width':width,'stroke-linecap':'round'}));
+    if(editable){
+      hand.append(svg('circle',{cx:80,cy:80-length,r:10,fill:'transparent'}),svg('circle',{cx:80,cy:80-length,r:5,fill:color,stroke:'white','stroke-width':1.5,class:'knob'}));
+    }
+    face.append(hand);
+    hands[name]=hand;
+  }
+  face.append(svg('circle',{cx:80,cy:80,r:4,fill:'#173a50','pointer-events':'none'}));
+  card.append(heading,face);
+  container.append(card);
+  function update(){
+    hands.hour.setAttribute('transform',`rotate(${value.hour%12*30+value.minute/2} 80 80)`);
+    hands.minute.setAttribute('transform',`rotate(${value.minute*6} 80 80)`);
+    if(editable){
+      hands.hour.setAttribute('aria-valuenow',value.hour%12||12);
+      hands.minute.setAttribute('aria-valuenow',value.minute);
+      card.dispatchEvent(new Event('input',{bubbles:true}));
+    }
+  }
+  function shiftMinute(delta){
+    const next=value.minute+delta;
+    if(linked)value.hour=(value.hour+Math.floor(next/60)+12)%12;
+    value.minute=(next+60)%60;
+  }
+  if(editable){
+    let dragging=null;
+    for(const [name,hand] of Object.entries(hands)){
+      hand.addEventListener('pointerdown',event=>{
+        if(!event.isPrimary || event.button!==0)return;
+        event.preventDefault();
+        dragging={name,id:event.pointerId};
+        face.setPointerCapture(event.pointerId);
+      });
+      hand.addEventListener('keydown',event=>{
+        const direction={ArrowRight:1,ArrowUp:1,ArrowDown:-1,ArrowLeft:-1}[event.key];
+        if(!direction)return;
+        event.preventDefault();
+        if(name==='hour')value.hour=(value.hour+direction+12)%12;
+        else shiftMinute(direction*5);
+        update();
+      });
+    }
+    face.addEventListener('pointermove',event=>{
+      if(!dragging||dragging.id!==event.pointerId)return;
+      const bounds=face.getBoundingClientRect();
+      const x=(event.clientX-bounds.left)/bounds.width*160-80;
+      const y=(event.clientY-bounds.top)/bounds.height*160-80;
+      if(Math.hypot(x,y)<8)return;
+      const angle=(Math.atan2(x,-y)*180/Math.PI+360)%360;
+      if(dragging.name==='hour')value.hour=Math.round(((angle-value.minute/2+360)%360)/30)%12;
+      else {
+        const target=Math.round(angle/30)%12*5;
+        const delta=linked?(target-value.minute+90)%60-30:target-value.minute;
+        shiftMinute(delta);
+      }
+      update();
+    });
+    for (const name of ['pointerup','pointercancel','lostpointercapture']){
+      face.addEventListener(name,event=>{if(dragging?.id===event.pointerId)dragging=null;});
+    }
+  }
+  update();
+  return ()=> (value.hour%12||12)*60+value.minute;
+}
+
+const randomInt=(min,max)=>Math.floor(Math.random()*(max-min+1))+min;
+const randomTime=()=>randomInt(1,12)*60+randomInt(0,11)*5;
+function uniqueQuestions(create,key){
+  const result=[],seen=new Set();
+  while(result.length<5){
+    const question=create(),signature=key(question);
+    if(seen.has(signature))continue;
+    seen.add(signature);
+    result.push(question);
+  }
+  return result;
+}
+const questions=[
+  ...uniqueQuestions(()=>({kind:'read',time:randomTime()}),q=>q.time),
+  ...uniqueQuestions(()=>({kind:'draw',time:randomTime()}),q=>q.time),
+  ...uniqueQuestions(()=>{
+    const hour=randomInt(1,7),minute=randomInt(0,11)*5;
+    let extraHours=randomInt(0,3),extraMinutes=randomInt(0,Math.floor((55-minute)/5))*5;
+    if(!extraHours&&!extraMinutes)extraHours=1;
+    return {kind:'easy',start:hour*60+minute,end:(hour+extraHours)*60+minute+extraMinutes};
+  },q=>`${q.start}-${q.end}`),
+  ...uniqueQuestions(()=>{
+    const hour=randomInt(1,8),minute=randomInt(1,11)*5;
+    const start=hour*60+minute;
+    return {kind:'across',start,end:start+(60-minute)+randomInt(0,24)*5};
+  },q=>`${q.start}-${q.end}`)
+];
+const questionResults=questions.map(()=>null);
+const stages={read:'시계 읽기',draw:'시계에 시각 나타내기',easy:'간단한 걸린 시간 구하기',across:'정각을 지나며 걸린 시간 구하기'};
+let index=0, readAnswer;
+const questionList=$('questionList');
+for(const [kind,label] of Object.entries(stages)){
+  const group=document.createElement('optgroup');
+  group.label=label;
+  questions.forEach((question,i)=>{
+    if(question.kind===kind)group.append(new Option(`${i+1}번 / ${questions.length}문제`,String(i)));
+  });
+  questionList.append(group);
+}
+questionList.addEventListener('change',event=>go(Number(event.target.value)));
+function go(nextIndex){
+  if(nextIndex<0||nextIndex>=questions.length)return;
+  index=nextIndex;
+  render();
+  $('question').focus({preventScroll:true});
+}
+function enterNumbers(isTime){
+  const entry=document.createElement('div');
+  entry.className='entry';
+  entry.innerHTML=`<label><input inputmode="numeric" maxlength="2" aria-label="${isTime?'몇 시':'몇 시간'}"> ${isTime?'시':'시간'}</label>
+    <label><input inputmode="numeric" maxlength="2" aria-label="몇 분"> 분</label>`;
+  $('inputArea').append(entry);
+  const [hour,minute]=entry.querySelectorAll('input');
+  return ()=>{
+    const h=Number(hour.value), m=Number(minute.value);
+    if(!/^[0-9]*$/.test(hour.value)||!/^[0-9]*$/.test(minute.value)||(!hour.value&&!minute.value)||m>=60||
+      (isTime&&(h<1||h>12||!minute.value)))return NaN;
+    return h*60+m;
+  };
+}
+function render(){
+  const q=questions[index], visual=$('visual'), draw=q.kind==='draw';
+  $('stage').textContent=`${stages[q.kind]} · ${index+1}/${questions.length} · 맞힌 문제 ${questionResults.filter(Boolean).length}`;
+  $('question').textContent=q.kind==='read'?'몇 시 몇 분인가요?':draw?'시계에 시각을 나타내 보세요.':'얼마나 시간이 걸렸나요?';
+  $('target').hidden=!draw;
+  $('target').textContent=draw?clockText(q.time):'';
+  $('hint').hidden=q.kind==='read';
+  $('hint').textContent=draw?'시침과 분침의 끝을 잡고 움직여 보세요.':'연습 시계의 바늘을 움직여 시간을 세어 보세요.';
+  $('feedback').hidden=true;
+  visual.classList.toggle('elapsed',q.start!==undefined);
+  visual.replaceChildren();
+  $('inputArea').replaceChildren();
+  if(q.kind==='read'||draw){
+    const timeReader=clockFace(visual,draw?'바늘 조작':'시각 읽기',draw?720:q.time,{kind:'start',editable:draw});
+    visual.querySelector('.time-caption').hidden=true;
+    readAnswer=draw?timeReader:enterNumbers(true);
+  }else{
+    visual.innerHTML=`<div class="time-card start">시작 시각<strong>${clockText(q.start)}</strong></div>
+      <div class="practice-clock"><div id="elapsedClock"></div>
+        <button type="button" id="resetClock" class="action">시작 시각으로</button></div>
+      <div class="time-card end">끝 시각<strong>${clockText(q.end)}</strong></div>`;
+    const holder=$('elapsedClock');
+    const resetClock=()=>{
+      holder.replaceChildren();
+      clockFace(holder,'연습 시계',q.start,{kind:'start',editable:true,linked:true});
+    };
+    resetClock();
+    $('resetClock').addEventListener('click',resetClock);
+    readAnswer=enterNumbers(false);
+  }
+  questionList.value=String(index);
+  $('prev').disabled=index===0;
+  $('next').disabled=index===questions.length-1;
+  $('travel').hidden=true;
+}
+function expected(q){return q.time??q.end-q.start;}
+function answerText(q){return q.time?clockText(q.time):elapsedText(expected(q));}
+function check(){
+  const q=questions[index], value=readAnswer(), feedback=$('feedback');
+  const correct=value===expected(q);
+  feedback.dataset.correct=correct;
+  if(!Number.isFinite(value))feedback.textContent=q.kind==='read'?'시 칸과 분 칸에 숫자를 써 보세요.':'시간과 분을 확인해 보세요. 1시간은 60분이에요.';
+  else{
+    if(correct)questionResults[index]=true;
+    else if(questionResults[index]===null)questionResults[index]=false;
+    if(correct)feedback.textContent=`✓ 정답! ${answerText(q)}`;
+    else feedback.textContent=q.time?'× 다시 해 보세요. 짧은바늘과 긴바늘을 확인해 보세요.':
+      q.kind==='easy'?'× 다시 해 보세요. 시끼리, 분끼리 빼 보세요.':'× 다시 해 보세요. 먼저 다음 정각까지 몇 분인지 세어 보세요.';
+    const score=questionResults.filter(Boolean).length;
+    const complete=questionResults.every(result=>result!==null);
+    $('stage').textContent=`${stages[q.kind]} · ${index+1}/${questions.length} · 맞힌 문제 ${score}`;
+    if(complete&&score>=15){
+      feedback.textContent=`✓ 20문제 완료! ${score}/20 정답이에요. 세계 여행을 시작하세요.`;
+      feedback.dataset.correct=true;
+      $('travel').hidden=false;
+    }else if(complete){
+      feedback.textContent=`${score}/20 정답이에요. 15문제 이상 맞히도록 틀린 문제를 다시 풀어 보세요.`;
+      feedback.dataset.correct=false;
+    }
+  }
+  feedback.hidden=false;
+}
+function solution(){
+  const q=questions[index];
+  $('solutionAnswer').textContent=answerText(q);
+  let lines=[];
+  if(q.time){
+    const h=Math.floor(q.time/60),m=q.time%60;
+    lines=[`짧은바늘 · ${h}와 ${h+1} 사이`,`긴바늘 · ${m/5}를 가리켜요 → ${m}분`];
+  }else if(q.kind==='easy'){
+    const a=Math.floor(q.start/60),b=Math.floor(q.end/60);
+    lines=[`시끼리 · ${b} − ${a} = ${b-a}시간`,`분끼리 · ${q.end%60} − ${q.start%60} = ${q.end%60-q.start%60}분`];
+  }else{
+    const first=Math.ceil(q.start/60)*60,last=Math.floor(q.end/60)*60;
+    const points=[...new Set([q.start,first,last,q.end])];
+    lines=points.slice(1).map((time,i)=>`${clockText(points[i])} → ${clockText(time)} · ${elapsedText(time-points[i])}`);
+  }
+  const steps=$('steps');
+  steps.replaceChildren(...lines.map(line=>{const div=document.createElement('div');div.textContent=line;return div;}));
+  $('solution').showModal();
+}
+$('inputArea').addEventListener('keydown',event=>{
+  if(event.key==='Enter'&&!event.isComposing){event.preventDefault();check();}
+});
+$('inputArea').addEventListener('input',()=>{$('feedback').hidden=true;});
+$('visual').addEventListener('input',()=>{$('feedback').hidden=true;});
+$('check').addEventListener('click',check);
+$('travel').addEventListener('click',()=>{window.location.href='./world_time_travel%20(2).html';});
+$('prev').addEventListener('click',()=>go(index-1));
+$('next').addEventListener('click',()=>go(index+1));
+$('reveal').addEventListener('click',solution);
+$('closeSolution').addEventListener('click',()=>$('solution').close());
+document.addEventListener('keydown',event=>{
+  if(event.defaultPrevented||$('solution').open||event.target.closest('input,select,[data-hand]'))return;
+  const delta={ArrowLeft:-1,ArrowRight:1}[event.key];
+  if(delta){event.preventDefault();go(index+delta);}
+});
+render();
+</script>
+</body>
+</html>
